@@ -1,3 +1,12 @@
+const express = require("express");
+const http = require("http");
+const socketIo = require("socket.io");
+
+const app = express();
+const server = http.createServer(app);
+
+const rooms = {}; // 방 정보를 저장할 객체
+
 const io = require("socket.io")(server, {
     cors: {
       origin: "*",
@@ -39,3 +48,7 @@ const io = require("socket.io")(server, {
       console.log("Client disconnected", socket.id);
     });
   });
+
+server.listen(4000, () => {
+  console.log("Server is running on port 4000");
+});
