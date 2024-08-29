@@ -18,6 +18,7 @@ const maximum = process.env.MAXIMUM || 4;
 io.on('connection', socket => {
     console.log(`` + socket.id + ` connected`);
     socket.on('join_room', data => {
+        console.log(data)
         if (users[data.room]) {
             const length = users[data.room].length;
             if (length === maximum) {
