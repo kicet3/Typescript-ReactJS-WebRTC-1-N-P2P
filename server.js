@@ -1,78 +1,49 @@
-let express = require('express');
-let http = require('http');
-let app = express();
-let cors = require('cors');
-let server = http.createServer(app);
-let socketio = require('socket.io');
-let io = socketio.listen(server);
-
-app.use(cors());
-const PORT = process.env.PORT || 4000;
-
-let users = {};
-
-let socketToRoom = {};
-
-const maximum = process.env.MAXIMUM || 4;
-
-io.on('connection', socket => {
-    console.log(`` + `${socket.id}`+ ` connected`);
-    socket.on('join_room', data => {
-        console.log('asdfasdf',data)
-        if (users[data.room]) {
-            const length = users[data.room].length;
-            if (length === maximum) {
-                socket.to(socket.id).emit('room_full');
-                return;
-            }
-            users[data.room].push({id: socket.id, email: data.email});
-        } else {
-            users[data.room] = [{id: socket.id, email: data.email}];
-        }
-        socketToRoom[socket.id] = data.room;
-
-        socket.join(data.room);
-        console.log(`[${socketToRoom[socket.id]}]: ${socket.id} enter`);
-
-        const usersInThisRoom = users[data.room].filter(user => user.id !== socket.id);
-
-        console.log(usersInThisRoom);
-
-        io.sockets.to(socket.id).emit('all_users', usersInThisRoom);
-    });
-
-    socket.on('offer', data => {
-        console.log(data.sdp);
-        socket.to(data.offerReceiveID).emit('getOffer', {sdp: data.sdp, offerSendID: data.offerSendID, offerSendEmail: data.offerSendEmail});
-    });
-
-    socket.on('answer', data => {
-        console.log(data.sdp);
-        socket.to(data.answerReceiveID).emit('getAnswer', {sdp: data.sdp, answerSendID: data.answerSendID});
-    });
-
-    socket.on('candidate', data => {
-        console.log(data.candidate);
-        socket.to(data.candidateReceiveID).emit('getCandidate', {candidate: data.candidate, candidateSendID: data.candidateSendID});
-    })
-
-    socket.on('disconnect', () => {
-        console.log(`[${socketToRoom[socket.id]}]: ${socket.id} exit`);
-        const roomID = socketToRoom[socket.id];
-        let room = users[roomID];
-        if (room) {
-            room = room.filter(user => user.id !== socket.id);
-            users[roomID] = room;
-            if (room.length === 0) {
-                delete users[roomID];
-                return;
-            }
-        }
-        socket.to(roomID).emit('user_exit', {id: socket.id});
-        console.log(users);
-    })
+const express = require("express");
+const http = require("http");
+const socketIo = require("socket.io");
+const app = express();
+const server = http.createServer(app);
+const io = socketIo(server);
+const rooms = {};  // 방 정보를 저장할 객체
+io.on("connection", (socket) => {
+  console.log(`New client connected: ${socket.id}`);
+  socket.on("join_room", (data) => {
+    const roomName = data.room;
+    socket.join(roomName);
+    console.log(`Client ${socket.id} joined room ${roomName}`);
+    if (!rooms[roomName]) {
+      rooms[roomName] = [];
+    }
+    rooms[roomName].push(socket.id);
+    const otherUsers = rooms[roomName].filter((id) => id !== socket.id);
+    // 방에 있는 다른 사용자 목록을 클라이언트에게 전송
+    socket.emit("all_users", otherUsers);
+    // 다른 사용자에게 방에 새로운 사용자가 들어왔음을 알림
+    socket.to(roomName).emit("new_user", socket.id);
+  });
+  socket.on("offer", (sdp) => {
+    console.log(`Sending offer from ${socket.id}`);
+    socket.broadcast.emit("getOffer", sdp);
+  });
+  socket.on("answer", (sdp) => {
+    console.log(`Sending answer from ${socket.id}`);
+    socket.broadcast.emit("getAnswer", sdp);
+  });
+  socket.on("candidate", (candidate) => {
+    console.log(`Sending candidate from ${socket.id}`);
+    socket.broadcast.emit("getCandidate", candidate);
+  });
+  socket.on("disconnect", () => {
+    console.log(`Client disconnected: ${socket.id}`);
+    // 방 목록에서 사용자를 제거
+    for (const roomName in rooms) {
+      rooms[roomName] = rooms[roomName].filter((id) => id !== socket.id);
+      if (rooms[roomName].length === 0) {
+        delete rooms[roomName];
+      }
+    }
+  });
 });
-
-server.listen(PORT, () => {
-    console.log(`server running on ${PORT}`);
+server.listen(4000, () => {
+  console.log("Server is running on port 4000");
 });
