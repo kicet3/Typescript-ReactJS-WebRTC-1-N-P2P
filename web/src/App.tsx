@@ -100,6 +100,7 @@ const App = () => {
 		getLocalStream();
 
 		socketRef.current.on('all_users', (allUsers: Array<{ id: string; email: string }>) => {
+			console.log(allUsers)
 			allUsers.forEach(async (user) => {
 				if (!localStreamRef.current) return;
 				const pc = createPeerConnection(user.id, user.email);
@@ -115,7 +116,7 @@ const App = () => {
 					socketRef.current.emit('offer', {
 						sdp: localSdp,
 						offerSendID: socketRef.current.id,
-						offerSendEmail: 'offerSendSample@sample.com',
+						offerSendEmail: '집가고싶다',
 						offerReceiveID: user.id,
 					});
 				} catch (e) {
