@@ -36,10 +36,12 @@ const App = () => {
 			localStreamRef.current = localStream;
 			if (localVideoRef.current) localVideoRef.current.srcObject = localStream;
 			if (!socketRef.current) return;
-			socketRef.current.emit('join_room', {
+			
+			socketRef.current.emit('join-room', {
 				room: '1234',
-				email: 'sample@naver.com',
+				email: 'aadsf@gmail.com',
 			});
+			
 		} catch (e) {
 			console.log(`getUserMedia error: ${e}`);
 		}
@@ -121,6 +123,7 @@ const App = () => {
 				}
 			});
 		});
+
 
 		socketRef.current.on(
 			'getOffer',

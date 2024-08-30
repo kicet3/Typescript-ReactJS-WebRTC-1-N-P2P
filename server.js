@@ -18,14 +18,28 @@ const maximum = process.env.MAXIMUM || 4;
 io.on('connection', (socket) => {
     console.log('New client connected:', socket.id);
 
-    socket.on('join-room', (roomId) => {
+    socket.on('join-room', (roomId, email) => {
         console.log(`Client ${socket.id} joining room: ${roomId}`);
+        
+        if (!users[roomId]) {
+            users[roomId] = [];
+        }
+    
+        users[roomId].push({
+            id: socket.id,
+            email: email,
+        });
+    
+        socketToRoom[socket.id] = roomId;
         socket.join(roomId);
-
+    
         // Broadcast to other users in the room
-        socket.to(roomId).emit('user-connected', socket.id);
+        const otherUsers = users[roomId].filter(user => user.id !== socket.id);
+        socket.emit('all_users', otherUsers); // 새로운 사용자에게 기존 사용자를 알려줌
+        socket.to(roomId).emit('user-connected', { id: socket.id, email: email }); // 기존 사용자에게 새로운 사용자 연결됨을 알림
     });
 
+    
     socket.on('disconnect', () => {
         console.log('Client disconnected:', socket.id);
         // Handle disconnection logic if necessary
